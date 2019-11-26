@@ -65,16 +65,18 @@ function prompt() {
                 viewAllRoles();
                 break;
             case "Add Role":
+                // done
                 addRole();
                 break;
             case "Remove Role":
                 removeRole();
                 break;
             case "View all Departments":
+                // done BUT styling could be better
                 viewAllDepartments();
                 break;
             case "Add Department":
-                // done although could fix the issue with the warning & prompt
+                // done
                 addDepartment();
                 break;
             case "Remove Department":
@@ -205,6 +207,17 @@ function addRole() {
     });
 }
 
+
+function viewAllDepartments() {
+    connection.query("SELECT * FROM department", function(err, res) {
+        if (err) throw err;
+        // underlined title row
+        console.log("\x1b[4m%s\x1b[0m", "id \t name \n");
+        res.forEach(dept => {
+            console.log(`${dept.id} \t ${dept.name}`);
+        })
+    });
+}
 
 function addDepartment() {
     // collect previously entered departments to avoid duplicates (validation)
