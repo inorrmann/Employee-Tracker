@@ -1,5 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const cTable = require("console.table");
 
 var connection = mysql.createConnection({
     host: "localhost",
@@ -14,6 +15,8 @@ connection.connect(function (err) {
     console.log(`connected as id ${connection.threadId}`);
     prompt();
 });
+
+let table; 
 
 function prompt() {
     inquirer.prompt([
@@ -41,7 +44,8 @@ function prompt() {
     ]).then(function (res) {
         switch (res.todo) {
             case "View all Employees":
-                viewAll();
+                table = "employee";
+                viewAll(table);
                 break;
             case "View all Employees by Department":
                 viewAllByDept();
@@ -62,7 +66,8 @@ function prompt() {
                 updateMgr();
                 break;
             case "View all Roles":
-                viewAllRoles();
+                table = "role";
+                viewAll(table);
                 break;
             case "Add Role":
                 // done
@@ -72,8 +77,8 @@ function prompt() {
                 removeRole();
                 break;
             case "View all Departments":
-                // done BUT styling could be better
-                viewAllDepartments();
+                table = "department";
+                viewAll(table);
                 break;
             case "Add Department":
                 // done
@@ -83,7 +88,7 @@ function prompt() {
                 removeDepartment();
                 break;
             case "Quit":
-                quitPrompt();
+                connection.end();
                 break;
         }
 
@@ -92,7 +97,6 @@ function prompt() {
 
 
 // *** FORMAT ANSWERS FROM PROMPTS ***
-
 let name;
 // capitalize first letter of answers from prompt
 function upperAnswer(answer) {
@@ -107,12 +111,23 @@ function upperAnswer(answer) {
 };
 
 
+// *** VIEW ALL ***
+function viewAll(table) {
+    connection.query(`SELECT * FROM ${table}`, function (err, res) {
+        if (err) throw err;
+        console.log("\n");
+        console.table(res);
+        prompt();
+    })
+}
+
 
 // *** VALIDATION FUNCTIONS FOR PROMPTS ***
 
 let previousData;
 let errorMessage;
 
+// validation for roles and departments only
 const validation = (input) => {
     upperAnswer(input);
 
@@ -127,27 +142,78 @@ const validation = (input) => {
     }
 };
 
+const validationEmployee = (input) => {
+    upperAnswer(input);
+
+    if (input === "") {
+        return "Please enter a valid answer";
+    }
+    else {
+        return true;
+    }
+};
 // *** END OF VALIDATION FUNCTIONS FOR PROMPTS ***
 
 
-// finish this
 function addEmp() {
-    inquirer.prompt([
-        {
-            type: "input",
-            message: "What is the employee's first name?",
-            name: "first_name"
-        },
-        {
-            type: "input",
-            message: "What is the employee's last name?",
-            name: "last_name"
-        },
-        {
-            type: "list",
-            message: "What is the employee's role?"
+    // collect previously saved employees to use as choices for manager
+    let employees = [];
+    connection.query("SELECT first_name, last_name FROM employee", function (err, res) {
+        if (err) throw err;
+        res.forEach(employee => {
+            let fullName = employee.first_name + " " + employee.last_name;
+            employees.push(fullName);
+        });
+    });
+
+    // collect previously saved roles to use as choices
+    let roles = [];
+    connection.query("SELECT title FROM role", function (err, res) {
+        if (err) throw err;
+        res.forEach(role => {
+            roles.push(role.title);
+        });
+        if (roles[0]) {
+            promptEmp();
         }
-    ])
+        else {
+            console.log('\x1b[41m%s\x1b[0m', "PLEASE NOTE: There are no roles yet; select a different option");
+            prompt();
+        }
+    });
+
+    const promptEmp = () => {
+        inquirer.prompt([
+            {
+                type: "input",
+                message: "What is the employee's first name?",
+                name: "first_name",
+                validate: validationEmployee
+            },
+            {
+                type: "input",
+                message: "What is the employee's last name?",
+                name: "last_name",
+                validate: validationEmployee
+            },
+            {
+                type: "list",
+                message: "What is the employee's role?",
+                name: "role",
+                choices: roles
+            },
+            {
+                type: "list",
+                message: "Who is the employee's manager?",
+                name: "manager",
+                choices: employees
+            }
+        ]).then(function (res) {
+            console.log(res);
+
+            // prompt();
+        });
+    }
 }
 
 
@@ -159,6 +225,13 @@ function addRole() {
         res.forEach(dept => {
             departments.push(dept.name);
         });
+        if (departments[0]) {
+            promptRole();
+        }
+        else {
+            console.log('\x1b[41m%s\x1b[0m', "PLEASE NOTE: There are no departments yet; select a different option");
+            prompt();
+        }
     });
     // collect previously entered roles to avoid duplicates (validation)
     connection.query("SELECT title FROM role", function (err, res) {
@@ -171,53 +244,43 @@ function addRole() {
     // error message for validation process
     errorMessage = "You have already entered this role; please enter a different one."
 
-    inquirer.prompt([
-        {
-            type: "input",
-            message: "What is the name of the role?",
-            name: "role",
-            validate: validation
-        },
-        {
-            type: "input",
-            message: "What is the salary for the role?",
-            name: "salary"
-        },
-        {
-            type: "list",
-            message: "Which department does this role belong to?",
-            name: "department",
-            choices: departments
-        }
-    ]).then(function (res) {
-        console.log(res)
-        let salary = res.salary;
-        let department = res.department;
+    const promptRole = () => {
+        inquirer.prompt([
+            {
+                type: "input",
+                message: "What is the name of the role?",
+                name: "role",
+                validate: validation
+            },
+            {
+                type: "input",
+                message: "What is the salary for the role?",
+                name: "salary"
+            },
+            {
+                type: "list",
+                message: "Which department does this role belong to?",
+                name: "department",
+                choices: departments
+            }
+        ]).then(function (res) {
+            let salary = res.salary;
+            let department = res.department;
 
-        // get the id from the department selected
-        connection.query("SELECT id FROM department WHERE name=?", [department], function (err, res) {
-            if (err) throw err;
-            // save role information to server
-            connection.query(`INSERT INTO role (title, salary, department_id) VALUES ("${name}", ${salary}, ${res[0].id})`, function (err) {
+            // get the id from the department selected
+            connection.query("SELECT id FROM department WHERE name=?", [department], function (err, res) {
                 if (err) throw err;
-                console.log("Role has been successfully added.")
-            });
-        })
-        prompt();
-    });
+                // save role information to server
+                connection.query(`INSERT INTO role (title, salary, department_id) VALUES ("${name}", ${salary}, ${res[0].id})`, function (err) {
+                    if (err) throw err;
+                    console.log('\x1b[32m%s\x1b[0m', `${name} has been successfully added.`)
+                });
+            })
+            prompt();
+        });
+    };
 }
 
-
-function viewAllDepartments() {
-    connection.query("SELECT * FROM department", function(err, res) {
-        if (err) throw err;
-        // underlined title row
-        console.log("\x1b[4m%s\x1b[0m", "id \t name \n");
-        res.forEach(dept => {
-            console.log(`${dept.id} \t ${dept.name}`);
-        })
-    });
-}
 
 function addDepartment() {
     // collect previously entered departments to avoid duplicates (validation)
@@ -241,7 +304,7 @@ function addDepartment() {
     ]).then(function (res) {
         connection.query(`INSERT INTO department (name) VALUES ("${name}")`, function (err) {
             if (err) throw err;
-            console.log("Deparment has been succesfully added.")
+            console.log('\x1b[32m%s\x1b[0m', `${name} has been succesfully added.`)
         });
         prompt();
     });
