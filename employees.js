@@ -44,6 +44,7 @@ function prompt() {
     ]).then(function (res) {
         switch (res.todo) {
             case "View all Employees":
+                // missing the manager full name
                 viewAllEmployees();
                 break;
             case "View all Employees by Department":
@@ -53,32 +54,36 @@ function prompt() {
                 viewAllByMgr();
                 break;
             case "Add Employee":
+                // *** DONE ***
                 addEmp();
                 break;
             case "Remove Employee":
                 removeEmp();
                 break;
             case "Update Employee Role":
+                // *** DONE ***
                 updateRole();
                 break;
             case "Update Employee Manager":
                 updateMgr();
                 break;
             case "View all Roles":
+                // *** DONE ***
                 viewAllRoles();
                 break;
             case "Add Role":
-                // done
+                // *** DONE ***
                 addRole();
                 break;
             case "Remove Role":
                 removeRole();
                 break;
             case "View all Departments":
+                // *** DONE ***
                 viewAllDepartments();
                 break;
             case "Add Department":
-                // done
+                // *** DONE ***
                 addDepartment();
                 break;
             case "Remove Department":
@@ -92,8 +97,9 @@ function prompt() {
     })
 };
 
-
-// *** FORMAT ANSWERS FROM PROMPTS ***
+// 
+// ***** FORMAT ANSWERS FROM PROMPTS *****
+// 
 let name;
 // capitalize first letter of answers from prompt
 function upperAnswer(answer) {
@@ -108,8 +114,9 @@ function upperAnswer(answer) {
 };
 
 
-// *** VALIDATION FUNCTIONS FOR PROMPTS ***
-
+// 
+// ***** VALIDATION FUNCTIONS FOR PROMPTS *****
+// 
 let previousData;
 let errorMessage;
 
@@ -126,13 +133,15 @@ const validationEmployee = (input) => {
     if (input === "") return "Please enter a valid answer";
     else return true;
 };
-// *** END OF VALIDATION FUNCTIONS FOR PROMPTS ***
+// ***** END *****
 
 
 function viewAllEmployees() {
-    const query = "SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, ";
-    query += "department.name FROM employee LEFT JOIN department, role ON (employee.role_id = role.id AND ";
-    query += "role.department.id = department.id)";
+    let query = "SELECT employee.id, employee.first_name, employee.last_name, ";
+    query += "role.title, department.name AS department, role.salary, ";
+    query += "manager_ID AS manager FROM employee LEFT JOIN (department, role) ";
+    query += "ON (employee.role_id = role.id AND role.department_id = department.id)";
+    // let query = "SELECT CONCAT(A.first_name, ' ', A.last_name) manager FROM employee A, employee B WHERE B.manager_id = A.id";
     connection.query(query, function (err, res) {
         if (err) throw err;
         console.log("\n");
@@ -142,9 +151,21 @@ function viewAllEmployees() {
 }
 
 
-function addEmp() {
-    // collect previously saved employees to use as choices for manager
-    let employees = ["None"];
+function viewAllByDept() {
+
+}
+
+
+function viewAllByMgr() {
+
+}
+
+
+// 
+// ***** FIND PREVIOUSLY STORED EMPLOYEES & ROLES *****
+// 
+let employees;
+const findSavedEmployees = () => {
     connection.query("SELECT first_name, last_name, id FROM employee", function (err, res) {
         if (err) throw err;
         res.forEach(employee => {
@@ -153,22 +174,30 @@ function addEmp() {
         });
         return employees;
     });
+}
 
-    // collect previously saved roles to use as choices
-    let roles = [];
+let roles;
+const findSavedRoles = () => {
     connection.query("SELECT title FROM role", function (err, res) {
         if (err) throw err;
         res.forEach(role => {
             roles.push(role.title);
         });
-        if (roles[0]) {
-            promptEmp();
-        }
-        else {
+        if (!roles[0]) {
             console.log('\x1b[41m%s\x1b[0m', "PLEASE NOTE: There are no roles yet; select a different option");
             prompt();
         }
+        return roles;
     });
+}
+// ***** END *****
+
+
+function addEmp() {
+    employees = ["None"];
+    findSavedEmployees();
+    roles = [];
+    findSavedRoles();
 
     const promptEmp = () => {
         inquirer.prompt([
@@ -197,60 +226,96 @@ function addEmp() {
                 choices: employees
             }
         ]).then(function (res) {
-            console.log(res);
             let firstName = upperAnswer(res.first_name);
             let lastName = upperAnswer(res.last_name);
-
+            // get role id for selected position
             let roleID;
-            let managerID;
-
             connection.query("SELECT id FROM role where title=?", [res.role], function (err, res) {
                 if (err) throw err;
                 roleID = res[0].id;
-                console.log("running 1")
-                findManagerID();
-                return roleID;
+                findManagerID(roleID);
             })
+            // get employee id for selected manager
+            let managerID;
+            const findManagerID = (roleID) => {
+                if (res.manager === "None") {
+                    managerID = null;
+                    insertEmp(roleID, managerID);
+                }
+                else {
+                    // parse manager response to extract manager's first and last name
+                    let managerInfo = res.manager.split(" ");
+                    let firstName = managerInfo[0];
+                    let lastName = managerInfo[1];
+                    connection.query("SELECT id FROM employee WHERE (first_name=? AND last_name=?)", [firstName, lastName], function (err, res) {
+                        if (err) throw err;
+                        managerID = res[0].id;
+                        insertEmp(roleID, managerID);
+                    });
+                }
+            }
 
-            const findManagerID = () => {
-
-                if (res.manager === "None") managerID = null;
-                // else {
-                    //     let index = res.manager.indexOf("ID:") + 4;
-                    //     managerID = res.manager.slice(index);
-                    //     console.log("running 2")
-                    //     return managerID;
-                    // };
-                    else {
-                        console.log("running 2");
-                        let managerInfo = res.manager.split(" ");
-                        let firstName = managerInfo[0];
-                        let lastName = managerInfo[1];
-                        connection.query("SELECT id FROM employee WHERE (first_name=? AND last_name=?)", [firstName, lastName], function (err, res) {
-                                if (err) throw err;
-                                managerID = res[0].id;
-                                return managerID;
-                            });
-                        }
-                    }
-
-            const insertEmp = () => {
-                console.log("running 3");
-                // console.log(managerID);
-                console.log(roleID);
+            const insertEmp = (roleID, managerID) => {
                 connection.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ("${firstName}", "${lastName}", ${roleID}, ${managerID})`, function (err) {
-
-                // connection.query(`INSERT INTO employee (first_name, last_name, role_id) VALUES ("${firstName}", "${lastName}", ${roleID})`, function (err) {
                     if (err) throw err;
-                    console.log(`${firstName} ${lastName} has been successfully entered.`);
+                    console.log('\x1b[32m%s\x1b[0m', `${firstName} ${lastName} has been successfully entered.`);
                 })
             }
-            // ******* CHANGE THIS SETTIMEOUT WITH ASYNC AWAIT *******
-            setTimeout(insertEmp, 10);
             prompt();
         });
     }
+    setTimeout(promptEmp, 100);
 }
+
+
+function removeEmp() {
+
+}
+
+
+function updateRole() {
+    employees = [];
+    findSavedEmployees();
+    roles = [];
+    findSavedRoles();
+
+    const promptUpdateRole = () => {
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Please select an employee.",
+                name: "employee",
+                choices: employees
+            },
+            {
+                type: "list",
+                message: "Select a new role",
+                name: "newRole",
+                choices: roles
+            }
+        ]).then(function (res) {
+            console.log(res);
+            let parsedName = res.employee.split(" ")
+            console.log(parsedName);
+            connection.query("SELECT id FROM role WHERE title=?", [res.newRole], function (err, res) {
+                if (err) throw err;
+                console.log(res);
+                connection.query(`UPDATE employee SET role_id=${res[0].id} WHERE id=${parsedName[3]}`, function (err) {
+                    if (err) throw err;
+                    console.log('\x1b[32m%s\x1b[0m', `${parsedName[0]} ${parsedName[1]}'s role has been successfully updated.`);
+                })
+
+            })
+        })
+    }
+    setTimeout(promptUpdateRole, 100);
+}
+
+
+function updateMgr() {
+
+}
+
 
 function viewAllRoles() {
     connection.query("SELECT role.id, role.title, role.salary, department.name FROM role LEFT JOIN department ON role.department_id=department.id", function (err, res) {
@@ -326,6 +391,12 @@ function addRole() {
     };
 }
 
+
+function removeRole() {
+
+}
+
+
 function viewAllDepartments() {
     connection.query("SELECT * FROM department", function (err, res) {
         if (err) throw err;
@@ -334,6 +405,7 @@ function viewAllDepartments() {
         prompt();
     })
 }
+
 
 function addDepartment() {
     // collect previously entered departments to avoid duplicates (validation)
@@ -363,6 +435,11 @@ function addDepartment() {
     });
 };
 
+
+function removeDepartment() {
+
+
+}
 
 // Re move:
 // which one doe you want to remove (and the list of the XX appears below
