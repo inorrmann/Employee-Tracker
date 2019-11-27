@@ -65,6 +65,7 @@ function prompt() {
                 updateRole();
                 break;
             case "Update Employee Manager":
+                // *** DONE ***
                 updateMgr();
                 break;
             case "View all Roles":
@@ -313,8 +314,41 @@ function updateRole() {
 
 
 function updateMgr() {
+    employees = [];
+    findSavedEmployees();
 
+    const promptUpdateMgr = () => {
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Please select an employee.",
+                name: "employee",
+                choices: employees
+            }
+        ]).then(function (res) {
+            console.log(res);
+            let index = employees.indexOf(res.employee)
+            let parsedEmp = res.employee.split(" ")
+            employees.splice(index, 1);
+            inquirer.prompt([
+                {
+                    type: "list",
+                    message: "Select a new manager",
+                    name: "newMgr",
+                    choices: employees
+                }
+            ]).then(function (res) {
+                let mgrId = res.newMgr.split(" ")[3]
+                connection.query(`UPDATE employee SET manager_id=${mgrId} WHERE id=${parsedEmp[3]}`, function (err) {
+                    if (err) throw err;
+                    console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]}'s manager has been successfully updated.`);
+                })
+            })
+        })
+    }
+    setTimeout(promptUpdateMgr, 50);
 }
+
 
 
 function viewAllRoles() {
