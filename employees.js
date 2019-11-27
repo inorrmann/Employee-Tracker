@@ -154,12 +154,50 @@ function viewAllEmployees() {
 
 function viewAllByDept() {
 
+
 }
 
 
 function viewAllByMgr() {
-
+    let managers = [];
+    let query = "SELECT A.first_name, A.last_name, A.id FROM employee A, employee B WHERE B.manager_id = A.id ORDER by A.id";
+    connection.query(query, function (err, res) {
+        if (err) throw err;
+        res.forEach(manager => {
+            let fullName = manager.first_name + " " + manager.last_name + " ID: " + manager.id;
+            managers.push(fullName);
+            return managers;
+        });
+    })
+    const viewMgrPrompt = () => {
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Select a manager",
+                name: "manager",
+                choices: managers
+            }
+        ]).then(function (res) {
+            let parsedMgr = res.manager.split(" ")
+            let query1 = `SELECT employee.id, employee.first_name, employee.last_name, `;
+            query1 += `role.title, department.name AS department, role.salary `;
+            query1 += `FROM employee LEFT JOIN (department, role) `;
+            query1 += `ON (employee.role_id = role.id AND role.department_id = department.id) `;
+            query1 += `WHERE manager_id =  ${parsedMgr[3]}`
+            connection.query(query1, function (err, res) {
+                if (err) throw err;
+                console.log(`\n Manager: ${parsedMgr[0]} ${parsedMgr[1]} \n\n Employees: \n`);
+                console.table(res);
+            })
+        });
+    }
+    setTimeout(viewMgrPrompt, 50);
 }
+
+// let query = "SELECT employee.id, employee.first_name, employee.last_name, ";
+//     query += "role.title, department.name AS department, role.salary, ";
+//     query += "manager_ID AS manager FROM employee LEFT JOIN (department, role) ";
+//     query += "ON (employee.role_id = role.id AND role.department_id = department.id)";
 
 
 // 
