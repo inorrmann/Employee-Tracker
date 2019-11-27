@@ -1,12 +1,14 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const dotenv = require("dotenv");
+dotenv.config();
 const cTable = require("console.table");
 
 var connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
-    user: "root",
-    password: "mysql2014",
+    user: process.env.user,
+    password: process.env.pw,
     database: "employeesDB"
 });
 
@@ -15,8 +17,6 @@ connection.connect(function (err) {
     console.log(`connected as id ${connection.threadId}`);
     prompt();
 });
-
-let table; 
 
 function prompt() {
     inquirer.prompt([
@@ -44,8 +44,7 @@ function prompt() {
     ]).then(function (res) {
         switch (res.todo) {
             case "View all Employees":
-                table = "employee";
-                viewAll(table);
+                viewAllEmployees();
                 break;
             case "View all Employees by Department":
                 viewAllByDept();
@@ -66,8 +65,7 @@ function prompt() {
                 updateMgr();
                 break;
             case "View all Roles":
-                table = "role";
-                viewAll(table);
+                viewAllRoles();
                 break;
             case "Add Role":
                 // done
@@ -77,8 +75,7 @@ function prompt() {
                 removeRole();
                 break;
             case "View all Departments":
-                table = "department";
-                viewAll(table);
+                viewAllDepartments();
                 break;
             case "Add Department":
                 // done
@@ -111,17 +108,6 @@ function upperAnswer(answer) {
 };
 
 
-// *** VIEW ALL ***
-function viewAll(table) {
-    connection.query(`SELECT * FROM ${table}`, function (err, res) {
-        if (err) throw err;
-        console.log("\n");
-        console.table(res);
-        prompt();
-    })
-}
-
-
 // *** VALIDATION FUNCTIONS FOR PROMPTS ***
 
 let previousData;
@@ -130,40 +116,42 @@ let errorMessage;
 // validation for roles and departments only
 const validation = (input) => {
     upperAnswer(input);
-
-    if (input === "") {
-        return "Please enter a valid answer";
-    }
-    else if (previousData.includes(name)) {
-        return errorMessage;
-    }
-    else {
-        return true;
-    }
+    if (input === "") return "Please enter a valid answer";
+    else if (previousData.includes(name)) return errorMessage;
+    else return true;
 };
 
 const validationEmployee = (input) => {
     upperAnswer(input);
-
-    if (input === "") {
-        return "Please enter a valid answer";
-    }
-    else {
-        return true;
-    }
+    if (input === "") return "Please enter a valid answer";
+    else return true;
 };
 // *** END OF VALIDATION FUNCTIONS FOR PROMPTS ***
 
 
+function viewAllEmployees() {
+    const query = "SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, ";
+    query += "department.name FROM employee LEFT JOIN department, role ON (employee.role_id = role.id AND ";
+    query += "role.department.id = department.id)";
+    connection.query(query, function (err, res) {
+        if (err) throw err;
+        console.log("\n");
+        console.table(res);
+        prompt();
+    })
+}
+
+
 function addEmp() {
     // collect previously saved employees to use as choices for manager
-    let employees = [];
-    connection.query("SELECT first_name, last_name FROM employee", function (err, res) {
+    let employees = ["None"];
+    connection.query("SELECT first_name, last_name, id FROM employee", function (err, res) {
         if (err) throw err;
         res.forEach(employee => {
-            let fullName = employee.first_name + " " + employee.last_name;
+            let fullName = employee.first_name + " " + employee.last_name + " ID: " + employee.id;
             employees.push(fullName);
         });
+        return employees;
     });
 
     // collect previously saved roles to use as choices
@@ -210,10 +198,67 @@ function addEmp() {
             }
         ]).then(function (res) {
             console.log(res);
+            let firstName = upperAnswer(res.first_name);
+            let lastName = upperAnswer(res.last_name);
 
-            // prompt();
+            let roleID;
+            let managerID;
+
+            connection.query("SELECT id FROM role where title=?", [res.role], function (err, res) {
+                if (err) throw err;
+                roleID = res[0].id;
+                console.log("running 1")
+                findManagerID();
+                return roleID;
+            })
+
+            const findManagerID = () => {
+
+                if (res.manager === "None") managerID = null;
+                // else {
+                    //     let index = res.manager.indexOf("ID:") + 4;
+                    //     managerID = res.manager.slice(index);
+                    //     console.log("running 2")
+                    //     return managerID;
+                    // };
+                    else {
+                        console.log("running 2");
+                        let managerInfo = res.manager.split(" ");
+                        let firstName = managerInfo[0];
+                        let lastName = managerInfo[1];
+                        connection.query("SELECT id FROM employee WHERE (first_name=? AND last_name=?)", [firstName, lastName], function (err, res) {
+                                if (err) throw err;
+                                managerID = res[0].id;
+                                return managerID;
+                            });
+                        }
+                    }
+
+            const insertEmp = () => {
+                console.log("running 3");
+                // console.log(managerID);
+                console.log(roleID);
+                connection.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ("${firstName}", "${lastName}", ${roleID}, ${managerID})`, function (err) {
+
+                // connection.query(`INSERT INTO employee (first_name, last_name, role_id) VALUES ("${firstName}", "${lastName}", ${roleID})`, function (err) {
+                    if (err) throw err;
+                    console.log(`${firstName} ${lastName} has been successfully entered.`);
+                })
+            }
+            // ******* CHANGE THIS SETTIMEOUT WITH ASYNC AWAIT *******
+            setTimeout(insertEmp, 10);
+            prompt();
         });
     }
+}
+
+function viewAllRoles() {
+    connection.query("SELECT role.id, role.title, role.salary, department.name FROM role LEFT JOIN department ON role.department_id=department.id", function (err, res) {
+        if (err) throw err;
+        console.log("\n");
+        console.table(res);
+        prompt();
+    })
 }
 
 
@@ -281,6 +326,14 @@ function addRole() {
     };
 }
 
+function viewAllDepartments() {
+    connection.query("SELECT * FROM department", function (err, res) {
+        if (err) throw err;
+        console.log("\n");
+        console.table(res);
+        prompt();
+    })
+}
 
 function addDepartment() {
     // collect previously entered departments to avoid duplicates (validation)
