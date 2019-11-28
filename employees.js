@@ -247,7 +247,7 @@ const findSavedEmployees = () => {
 
 let roles;
 const findSavedRoles = () => {
-    connection.query("SELECT title FROM role", function (err, res) {
+    connection.query("SELECT title FROM role ORDER BY title", function (err, res) {
         if (err) throw err;
         res.forEach(role => {
             roles.push(role.title);
@@ -361,7 +361,7 @@ function removeEmp() {
             let parsedEmp = res.employee.split(" ");
             connection.query("DELETE FROM employee WHERE id=?", [parsedEmp[3]], function (err, res) {
                 if (err) throw err;
-                console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]} was successfully removed.`);
+                console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]} has been successfully removed.`);
             })
             prompt();
         })
@@ -535,20 +535,36 @@ function removeRole() {
             {
                 type: "confirm",
                 message: "Are you sure you want to remove a role? \n This will also remove all employees associated with this role.",
-                name: "confirmation",
+                name: "confirm",
             }
         ]).then(function (res) {
-            console.log(res);
-            // let parsedEmp = res.employee.split(" ");
-            // connection.query("DELETE FROM employee WHERE id=?", [parsedEmp[3]], function (err, res) {
-            //     if (err) throw err;
-            //     console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]} was successfully removed.`);
-            // })
-            // prompt();
+            if (res.confirm === false) prompt();
+            else {
+                inquirer.prompt([
+                    {
+                        type: "list",
+                        message: "Select a role to remove",
+                        name: "role",
+                        choices: roles
+                    }
+                ]).then(function (res) {
+                    let role = res.role;
+                    connection.query("SELECT id FROM role WHERE title=?", [res.role], function (err, res) {
+                        if (err) throw err;
+                        connection.query("DELETE FROM role WHERE id=?", [res[0].id], function (err, res) {
+                            if (err) throw err;
+                            console.log('\x1b[32m%s\x1b[0m', `${role} has been successfully removed.`)
+                        })
+                        connection.query("DELETE FROM employee WHERE role_id=?", [res[0].id], function (err, res) {
+                            if (err) throw err;
+                        })
+                    });
+                    prompt();
+                })
+            }
         })
     }
     setTimeout(removeRolesPrompt, 50);
-
 }
 
 
@@ -592,12 +608,61 @@ function addDepartment() {
 
 
 function removeDepartment() {
+    // collect previously saved departments
+    let departments = [];
+    connection.query("SELECT name FROM department", function (err, res) {
+        if (err) throw err;
+        res.forEach(dept => {
+            departments.push(dept.name);
+        })
+        removeDeptPrompt();
+    })
 
-
+    const removeDeptPrompt = () => {
+        inquirer.prompt([
+            {
+                type: "confirm",
+                message: "Are you sure you want to remove a department? \n This will also remove all roles and employees associated with it.",
+                name: "confirm",
+            }
+        ]).then(function (res) {
+            if (res.confirm === false) prompt();
+            else {
+                inquirer.prompt([
+                    {
+                        type: "list",
+                        message: "Select a department to remove",
+                        name: "department",
+                        choices: departments
+                    }
+                ]).then(function (res) {
+                    let dept = res.department;
+                    connection.query("SELECT id FROM department WHERE name=?", [dept], function (err, res) {
+                        if (err) throw err;
+                        let deptId = res[0].id;
+                        // delete department
+                        connection.query("DELETE FROM department WHERE id=?", [deptId], function (err, res) {
+                            if (err) throw err;
+                            console.log('\x1b[32m%s\x1b[0m', `${dept} has been successfully removed.`)
+                        })
+                        // find id of roles associated with department
+                        connection.query("SELECT id FROM role WHERE department_id=?", [deptId], function (err, res) {
+                            if (err) throw err;
+                            res.forEach(role => {
+                                // delete each role
+                                connection.query("DELETE FROM role WHERE id=?", [role.id], function (err, res) {
+                                    if (err) throw err;
+                                })
+                                // delete all employees associated with each role
+                                connection.query("DELETE FROM employee WHERE role_id=?", [role.id], function (err, res) {
+                                    if (err) throw err;
+                                })
+                            })
+                        })
+                    });
+                    prompt();
+                })
+            }
+        })
+    }
 }
-
-// Re move:
-// which one doe you want to remove (and the list of the XX appears below
-
-//     removing role also removes employees
-//     dept: this will also remove associated roles and emplouyees)
