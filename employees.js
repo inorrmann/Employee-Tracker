@@ -57,7 +57,6 @@ function prompt() {
                 addEmp();
                 break;
             case "Remove Employee":
-                // ***** FINISH *****
                 removeEmp();
                 break;
             case "Update Employee Role":
@@ -254,7 +253,7 @@ const findSavedRoles = () => {
             roles.push(role.title);
         });
         if (!roles[0]) {
-            console.log('\x1b[41m%s\x1b[0m', "PLEASE NOTE: There are no roles yet; select a different option");
+            console.log('\x1b[41m%s\x1b[0m', "THERE ARE NO ROLES; please select a different option");
             prompt();
         }
         return roles;
@@ -341,6 +340,14 @@ function addEmp() {
 function removeEmp() {
     employees = [];
     findSavedEmployees();
+    // confirm whether there are employees in server or not
+    const removeEmpConfirm = () => {
+        if (employees[0]) removeEmpPrompt();
+        else {
+            console.log('\x1b[41m%s\x1b[0m', "THERE ARE NO EMPLOYEES; please select a different option");
+            prompt();
+        }
+    }
 
     const removeEmpPrompt = () => {
         inquirer.prompt([
@@ -350,7 +357,7 @@ function removeEmp() {
                 name: "employee",
                 choices: employees
             }
-        ]).then(function(res) {
+        ]).then(function (res) {
             let parsedEmp = res.employee.split(" ");
             connection.query("DELETE FROM employee WHERE id=?", [parsedEmp[3]], function (err, res) {
                 if (err) throw err;
@@ -359,7 +366,7 @@ function removeEmp() {
             prompt();
         })
     }
-    setTimeout(removeEmpPrompt, 50);
+    setTimeout(removeEmpConfirm, 50);
 }
 
 
@@ -462,7 +469,7 @@ function addRole() {
             promptRole();
         }
         else {
-            console.log('\x1b[41m%s\x1b[0m', "PLEASE NOTE: There are no departments yet; select a different option");
+            console.log('\x1b[41m%s\x1b[0m', "THERE ARE NO DEPARTMENTS YET; please select a different option");
             prompt();
         }
     });
@@ -489,7 +496,7 @@ function addRole() {
                 type: "number",
                 message: "What is the salary for the role?",
                 name: "salary",
-                validate: function(input) {
+                validate: function (input) {
                     if (!parseInt(input)) return "Please enter only numbers."
                     else return true;
                 }
@@ -520,6 +527,27 @@ function addRole() {
 
 
 function removeRole() {
+    roles = [];
+    findSavedRoles();
+
+    const removeRolesPrompt = () => {
+        inquirer.prompt([
+            {
+                type: "confirm",
+                message: "Are you sure you want to remove a role? \n This will also remove all employees associated with this role.",
+                name: "confirmation",
+            }
+        ]).then(function (res) {
+            console.log(res);
+            // let parsedEmp = res.employee.split(" ");
+            // connection.query("DELETE FROM employee WHERE id=?", [parsedEmp[3]], function (err, res) {
+            //     if (err) throw err;
+            //     console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]} was successfully removed.`);
+            // })
+            // prompt();
+        })
+    }
+    setTimeout(removeRolesPrompt, 50);
 
 }
 
