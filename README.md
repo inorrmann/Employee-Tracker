@@ -1,6 +1,7 @@
 # Employee Tracker CLI
 
-https://img.shields.io/github/languages/top/inorrmann/Employee-Tracker?style=plastic
+[![npm version](https://badge.fury.io/js/inquirer.svg)](https://badge.fury.io/js/inquirer)
+[![npm version](https://badge.fury.io/js/mysql.svg)](https://badge.fury.io/js/mysql)
 
 This interface allows companies to view and manage their departments, roles, and employees.
 
