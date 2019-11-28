@@ -396,12 +396,9 @@ function updateRole() {
                 choices: roles
             }
         ]).then(function (res) {
-            console.log(res);
             let parsedName = res.employee.split(" ")
-            console.log(parsedName);
             connection.query("SELECT id FROM role WHERE title=?", [res.newRole], function (err, res) {
                 if (err) throw err;
-                console.log(res);
                 connection.query(`UPDATE employee SET role_id=${res[0].id} WHERE id=${parsedName[3]}`, function (err) {
                     if (err) throw err;
                     console.log('\x1b[32m%s\x1b[0m', `\n${parsedName[0]} ${parsedName[1]}'s role has been successfully updated.\n`);
@@ -428,7 +425,6 @@ function updateMgr() {
                 choices: employees
             }
         ]).then(function (res) {
-            console.log(res);
             let index = employees.indexOf(res.employee)
             let parsedEmp = res.employee.split(" ")
             employees.splice(index, 1);
