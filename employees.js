@@ -38,6 +38,7 @@ function prompt() {
                 "View all Departments",
                 "Add Department",
                 "Remove Department",
+                "View Budget by Department",
                 "Quit"
             ]
         }
@@ -72,7 +73,6 @@ function prompt() {
                 addRole();
                 break;
             case "Remove Role":
-                // ***** FINISH *****
                 removeRole();
                 break;
             case "View all Departments":
@@ -82,8 +82,10 @@ function prompt() {
                 addDepartment();
                 break;
             case "Remove Department":
-                // ***** FINISH *****
                 removeDepartment();
+                break;
+            case "View Budget by Department":
+                viewBudget();
                 break;
             case "Quit":
                 connection.end();
@@ -403,6 +405,7 @@ function updateRole() {
                 })
 
             })
+            prompt();
         })
     }
     setTimeout(promptUpdateRole, 100);
@@ -439,6 +442,7 @@ function updateMgr() {
                     if (err) throw err;
                     console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]}'s manager has been successfully updated.`);
                 })
+                prompt();
             })
         })
     }
@@ -600,9 +604,9 @@ function addDepartment() {
     ]).then(function (res) {
         connection.query(`INSERT INTO department (name) VALUES ("${name}")`, function (err) {
             if (err) throw err;
-            console.log('\x1b[32m%s\x1b[0m', `${name} has been succesfully added.`)
+            console.log('\x1b[32m%s\x1b[0m', `\n ${name} Department has been succesfully added.\n`)
+            prompt();
         });
-        prompt();
     });
 };
 
@@ -640,11 +644,6 @@ function removeDepartment() {
                     connection.query("SELECT id FROM department WHERE name=?", [dept], function (err, res) {
                         if (err) throw err;
                         let deptId = res[0].id;
-                        // delete department
-                        connection.query("DELETE FROM department WHERE id=?", [deptId], function (err, res) {
-                            if (err) throw err;
-                            console.log('\x1b[32m%s\x1b[0m', `${dept} has been successfully removed.`)
-                        })
                         // find id of roles associated with department
                         connection.query("SELECT id FROM role WHERE department_id=?", [deptId], function (err, res) {
                             if (err) throw err;
@@ -659,10 +658,56 @@ function removeDepartment() {
                                 })
                             })
                         })
+                        // delete department
+                        connection.query("DELETE FROM department WHERE id=?", [deptId], function (err, res) {
+                            if (err) throw err;
+                            console.log('\x1b[32m%s\x1b[0m', `\n ${dept} Department has been successfully removed.\n`)
+                            prompt();
+                        })
                     });
-                    prompt();
                 })
             }
+        })
+    }
+}
+
+
+function viewBudget() {
+    let departments = [];
+    connection.query("SELECT name FROM department", function (err, res) {
+        if (err) throw err;
+        res.forEach(dept => {
+            departments.push(dept.name);
+        })
+        budgetPrompt();
+    })
+
+    const budgetPrompt = () => {
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Which department's budget would you like to see?",
+                name: "department",
+                choices: departments
+            }
+        ]).then(function (res) {
+            let dept = res.department;
+            connection.query("SELECT id FROM department WHERE name=?", [res.department], function (err, res) {
+                if (err) throw err;
+                let query = "SELECT employee.id, role.salary FROM employee LEFT JOIN (department, role) ON ";
+                query += "(employee.role_id = role.id AND department.id = role.department_id) WHERE ";
+                query += "department.id =?"
+                connection.query(query, [res[0].id], function (err, res) {
+                    if (err) throw err;
+                    let budget = 0;
+                    res.forEach(position => {
+                        budget += position.salary;
+                        return budget;
+                    })
+                    console.log('\x1b[35m%s\x1b[0m', `\n Total Budget for ${dept} Department is ${budget}\n`);
+                    prompt();
+                })
+            })
         })
     }
 }
