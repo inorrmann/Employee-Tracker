@@ -1,5 +1,7 @@
 # Employee Tracker CLI
 
+https://img.shields.io/github/languages/top/inorrmann/Employee-Tracker?style=plastic
+
 This interface allows companies to view and manage their departments, roles, and employees.
 
 Users can input:
