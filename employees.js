@@ -44,13 +44,14 @@ function prompt() {
     ]).then(function (res) {
         switch (res.todo) {
             case "View all Employees":
-                // missing the manager full name
+                // missing manager full name
                 viewAllEmployees();
                 break;
             case "View all Employees by Department":
                 viewAllByDept();
                 break;
             case "View all Employees by Manager":
+                // *** DONE ***
                 viewAllByMgr();
                 break;
             case "Add Employee":
@@ -153,8 +154,42 @@ function viewAllEmployees() {
 
 
 function viewAllByDept() {
-
-
+    let departments = [];
+    connection.query("SELECT * FROM department", function (err, res) {
+        if (err) throw err;
+        res.forEach(department => {
+            departments.push(department.name);
+            return departments;
+        })
+    })
+    const viewDeptPrompt = () => {
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Select a department",
+                name: "dept",
+                choices: departments
+            }
+        ]).then(function (res) {
+            console.log(res);
+            let department = res.dept;
+            connection.query("SELECT id FROM department WHERE name=?", [res.dept], function (err, res) {
+                if (err) throw err;
+                let query = `SELECT employee.id, employee.first_name, employee.last_name, `;
+                query += `role.title, role.salary, manager_id AS manager `;
+                query += `FROM employee LEFT JOIN (department, role) `;
+                query += `ON (employee.role_id = role.id AND role.department_id = department.id) `;
+                query += `WHERE department.id =  ${res[0].id}`
+                connection.query(query, function (err, res) {
+                    if (err) throw err;
+                    console.log(`\n Department: ${department} \n`);
+                    console.table(res);
+                })
+            });
+            prompt();
+        });
+    }
+    setTimeout(viewDeptPrompt, 50);
 }
 
 
@@ -164,7 +199,7 @@ function viewAllByMgr() {
     connection.query(query, function (err, res) {
         if (err) throw err;
         res.forEach(manager => {
-            let fullName = manager.first_name + " " + manager.last_name + " ID: " + manager.id;
+            let fullName = `${manager.first_name} ${manager.last_name} ID: ${manager.id}`;
             managers.push(fullName);
             return managers;
         });
@@ -189,15 +224,11 @@ function viewAllByMgr() {
                 console.log(`\n Manager: ${parsedMgr[0]} ${parsedMgr[1]} \n\n Employees: \n`);
                 console.table(res);
             })
+            prompt();
         });
     }
     setTimeout(viewMgrPrompt, 50);
 }
-
-// let query = "SELECT employee.id, employee.first_name, employee.last_name, ";
-//     query += "role.title, department.name AS department, role.salary, ";
-//     query += "manager_ID AS manager FROM employee LEFT JOIN (department, role) ";
-//     query += "ON (employee.role_id = role.id AND role.department_id = department.id)";
 
 
 // 
@@ -208,7 +239,7 @@ const findSavedEmployees = () => {
     connection.query("SELECT first_name, last_name, id FROM employee", function (err, res) {
         if (err) throw err;
         res.forEach(employee => {
-            let fullName = employee.first_name + " " + employee.last_name + " ID: " + employee.id;
+            let fullName = `${employee.first_name} ${employee.last_name} ID: ${employee.id}`;
             employees.push(fullName);
         });
         return employees;
