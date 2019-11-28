@@ -51,44 +51,39 @@ function prompt() {
                 viewAllByDept();
                 break;
             case "View all Employees by Manager":
-                // *** DONE ***
                 viewAllByMgr();
                 break;
             case "Add Employee":
-                // *** DONE ***
                 addEmp();
                 break;
             case "Remove Employee":
+                // ***** FINISH *****
                 removeEmp();
                 break;
             case "Update Employee Role":
-                // *** DONE ***
                 updateRole();
                 break;
             case "Update Employee Manager":
-                // *** DONE ***
                 updateMgr();
                 break;
             case "View all Roles":
-                // *** DONE ***
                 viewAllRoles();
                 break;
             case "Add Role":
-                // *** DONE ***
                 addRole();
                 break;
             case "Remove Role":
+                // ***** FINISH *****
                 removeRole();
                 break;
             case "View all Departments":
-                // *** DONE ***
                 viewAllDepartments();
                 break;
             case "Add Department":
-                // *** DONE ***
                 addDepartment();
                 break;
             case "Remove Department":
+                // ***** FINISH *****
                 removeDepartment();
                 break;
             case "Quit":
@@ -155,6 +150,7 @@ function viewAllEmployees() {
 
 function viewAllByDept() {
     let departments = [];
+    // create array with departments
     connection.query("SELECT * FROM department", function (err, res) {
         if (err) throw err;
         res.forEach(department => {
@@ -171,7 +167,6 @@ function viewAllByDept() {
                 choices: departments
             }
         ]).then(function (res) {
-            console.log(res);
             let department = res.dept;
             connection.query("SELECT id FROM department WHERE name=?", [res.dept], function (err, res) {
                 if (err) throw err;
@@ -182,8 +177,13 @@ function viewAllByDept() {
                 query += `WHERE department.id =  ${res[0].id}`
                 connection.query(query, function (err, res) {
                     if (err) throw err;
-                    console.log(`\n Department: ${department} \n`);
-                    console.table(res);
+                    if (res[0]) {
+                        console.log(`\n Department: ${department} \n`);
+                        console.table(res);
+                    }
+                    else {
+                        console.log('\x1b[32m%s\x1b[0m', `\n The ${department} Department does not currently have any employees.`)
+                    }
                 })
             });
             prompt();
@@ -221,7 +221,7 @@ function viewAllByMgr() {
             query1 += `WHERE manager_id =  ${parsedMgr[3]}`
             connection.query(query1, function (err, res) {
                 if (err) throw err;
-                console.log(`\n Manager: ${parsedMgr[0]} ${parsedMgr[1]} \n\n Employees: \n`);
+                console.log(`\n Manager: ${parsedMgr[0]} ${parsedMgr[1]} \n`);
                 console.table(res);
             })
             prompt();
@@ -339,7 +339,27 @@ function addEmp() {
 
 
 function removeEmp() {
+    employees = [];
+    findSavedEmployees();
 
+    const removeEmpPrompt = () => {
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Select the employee you would like to remove.",
+                name: "employee",
+                choices: employees
+            }
+        ]).then(function(res) {
+            let parsedEmp = res.employee.split(" ");
+            connection.query("DELETE FROM employee WHERE id=?", [parsedEmp[3]], function (err, res) {
+                if (err) throw err;
+                console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]} was successfully removed.`);
+            })
+            prompt();
+        })
+    }
+    setTimeout(removeEmpPrompt, 50);
 }
 
 
@@ -466,9 +486,13 @@ function addRole() {
                 validate: validation
             },
             {
-                type: "input",
+                type: "number",
                 message: "What is the salary for the role?",
-                name: "salary"
+                name: "salary",
+                validate: function(input) {
+                    if (!parseInt(input)) return "Please enter only numbers."
+                    else return true;
+                }
             },
             {
                 type: "list",
