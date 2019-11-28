@@ -144,6 +144,7 @@ function viewAllEmployees() {
         if (err) throw err;
         console.log("\n");
         console.table(res);
+        console.log("\n");
         prompt();
     })
 }
@@ -181,13 +182,14 @@ function viewAllByDept() {
                     if (res[0]) {
                         console.log(`\n Department: ${department} \n`);
                         console.table(res);
+                        prompt();
                     }
                     else {
-                        console.log('\x1b[32m%s\x1b[0m', `\n The ${department} Department does not currently have any employees.`)
+                        console.log('\x1b[32m%s\x1b[0m', `\n The ${department} Department does not currently have any employees.\n`)
+                        prompt();
                     }
                 })
             });
-            prompt();
         });
     }
     setTimeout(viewDeptPrompt, 50);
@@ -224,8 +226,9 @@ function viewAllByMgr() {
                 if (err) throw err;
                 console.log(`\n Manager: ${parsedMgr[0]} ${parsedMgr[1]} \n`);
                 console.table(res);
+                console.log("\n");
+                prompt();
             })
-            prompt();
         });
     }
     setTimeout(viewMgrPrompt, 50);
@@ -255,7 +258,7 @@ const findSavedRoles = () => {
             roles.push(role.title);
         });
         if (!roles[0]) {
-            console.log('\x1b[41m%s\x1b[0m', "THERE ARE NO ROLES; please select a different option");
+            console.log('\x1b[41m%s\x1b[0m', "\nTHERE ARE NO ROLES; please select a different option\n");
             prompt();
         }
         return roles;
@@ -329,10 +332,10 @@ function addEmp() {
             const insertEmp = (roleID, managerID) => {
                 connection.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ("${firstName}", "${lastName}", ${roleID}, ${managerID})`, function (err) {
                     if (err) throw err;
-                    console.log('\x1b[32m%s\x1b[0m', `${firstName} ${lastName} has been successfully entered.`);
+                    console.log('\x1b[32m%s\x1b[0m', `\n${firstName} ${lastName} has been successfully entered.\n`);
+                    prompt();
                 })
             }
-            prompt();
         });
     }
     setTimeout(promptEmp, 100);
@@ -346,7 +349,7 @@ function removeEmp() {
     const removeEmpConfirm = () => {
         if (employees[0]) removeEmpPrompt();
         else {
-            console.log('\x1b[41m%s\x1b[0m', "THERE ARE NO EMPLOYEES; please select a different option");
+            console.log('\x1b[41m%s\x1b[0m', "\nTHERE ARE NO EMPLOYEES; please select a different option\n");
             prompt();
         }
     }
@@ -363,9 +366,9 @@ function removeEmp() {
             let parsedEmp = res.employee.split(" ");
             connection.query("DELETE FROM employee WHERE id=?", [parsedEmp[3]], function (err, res) {
                 if (err) throw err;
-                console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]} has been successfully removed.`);
+                console.log('\x1b[32m%s\x1b[0m', `\n${parsedEmp[0]} ${parsedEmp[1]} has been successfully removed.\n`);
+                prompt();
             })
-            prompt();
         })
     }
     setTimeout(removeEmpConfirm, 50);
@@ -401,11 +404,11 @@ function updateRole() {
                 console.log(res);
                 connection.query(`UPDATE employee SET role_id=${res[0].id} WHERE id=${parsedName[3]}`, function (err) {
                     if (err) throw err;
-                    console.log('\x1b[32m%s\x1b[0m', `${parsedName[0]} ${parsedName[1]}'s role has been successfully updated.`);
+                    console.log('\x1b[32m%s\x1b[0m', `\n${parsedName[0]} ${parsedName[1]}'s role has been successfully updated.\n`);
+                    prompt();
                 })
 
             })
-            prompt();
         })
     }
     setTimeout(promptUpdateRole, 100);
@@ -440,9 +443,9 @@ function updateMgr() {
                 let mgrId = res.newMgr.split(" ")[3]
                 connection.query(`UPDATE employee SET manager_id=${mgrId} WHERE id=${parsedEmp[3]}`, function (err) {
                     if (err) throw err;
-                    console.log('\x1b[32m%s\x1b[0m', `${parsedEmp[0]} ${parsedEmp[1]}'s manager has been successfully updated.`);
+                    console.log('\x1b[32m%s\x1b[0m', `\n${parsedEmp[0]} ${parsedEmp[1]}'s manager has been successfully updated.\n`);
+                    prompt();
                 })
-                prompt();
             })
         })
     }
@@ -456,6 +459,7 @@ function viewAllRoles() {
         if (err) throw err;
         console.log("\n");
         console.table(res);
+        console.log("\n");
         prompt();
     })
 }
@@ -473,7 +477,7 @@ function addRole() {
             promptRole();
         }
         else {
-            console.log('\x1b[41m%s\x1b[0m', "THERE ARE NO DEPARTMENTS YET; please select a different option");
+            console.log('\x1b[41m%s\x1b[0m', "\n THERE ARE NO DEPARTMENTS YET; please select a different option.\n");
             prompt();
         }
     });
@@ -521,10 +525,10 @@ function addRole() {
                 // save role information to server
                 connection.query(`INSERT INTO role (title, salary, department_id) VALUES ("${name}", ${salary}, ${res[0].id})`, function (err) {
                     if (err) throw err;
-                    console.log('\x1b[32m%s\x1b[0m', `${name} has been successfully added.`)
+                    console.log('\x1b[32m%s\x1b[0m', `\n${name} has been successfully added.\n`)
+                    prompt();
                 });
             })
-            prompt();
         });
     };
 }
@@ -555,15 +559,15 @@ function removeRole() {
                     let role = res.role;
                     connection.query("SELECT id FROM role WHERE title=?", [res.role], function (err, res) {
                         if (err) throw err;
-                        connection.query("DELETE FROM role WHERE id=?", [res[0].id], function (err, res) {
-                            if (err) throw err;
-                            console.log('\x1b[32m%s\x1b[0m', `${role} has been successfully removed.`)
-                        })
                         connection.query("DELETE FROM employee WHERE role_id=?", [res[0].id], function (err, res) {
                             if (err) throw err;
                         })
+                        connection.query("DELETE FROM role WHERE id=?", [res[0].id], function (err, res) {
+                            if (err) throw err;
+                            console.log('\x1b[32m%s\x1b[0m', `\n ${role} has been successfully removed.\n`)
+                            prompt();
+                        })
                     });
-                    prompt();
                 })
             }
         })
@@ -577,6 +581,7 @@ function viewAllDepartments() {
         if (err) throw err;
         console.log("\n");
         console.table(res);
+        console.log("\n");
         prompt();
     })
 }
