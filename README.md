@@ -2,6 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/inquirer.svg)](https://badge.fury.io/js/inquirer)
 [![npm version](https://badge.fury.io/js/mysql.svg)](https://badge.fury.io/js/mysql)
+![Javascript badge](https://img.shields.io/github/languages/top/inorrmann/Employee-Tracker)
 
 This interface allows companies to view and manage their departments, roles, and employees.
 
@@ -22,4 +23,4 @@ Users can also remove employees, roles, and departments, and update the role or 
 
 As an added bonus, users can also view the total budget of a department (i.e., the combined salaries of all employees in that department).
 
-![Employee Tracker Demo](/demo.gif)
+![Employee Tracker Demo](./demo.gif)
