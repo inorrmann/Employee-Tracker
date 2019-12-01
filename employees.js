@@ -140,6 +140,12 @@ function viewAllEmployees() {
     query += "manager_ID AS manager FROM employee LEFT JOIN (department, role) ";
     query += "ON (employee.role_id = role.id AND role.department_id = department.id)";
     // let query = "SELECT CONCAT(A.first_name, ' ', A.last_name) manager FROM employee A, employee B WHERE B.manager_id = A.id";
+    // let query = "SELECT e.id, e.first_name, e.last_name, r.title, r.salary, d.name AS department, CONCAT(b.first_name, ' ', b.last_name) AS manager FROM employee e JOIN role r ON e.role_id=r.id JOIN department d ON r.department_id=d.id JOIN employee b ON e.manager_id=b.id"
+    // let query = "SELECT employee.id, employee.first_name, employee.last_name, ";
+    // query += "role.title, department.name AS department, role.salary, ";
+    // query += "CONCAT(A.first_name, ' ', A.last_name) AS manager FROM employee ";
+    // query += "LEFT JOIN (department, role) ON (employee.role_id = role.id AND ";
+    // query += "role.department_id = department.id) JOIN employee A ON employee.manager_id = A.id";
     connection.query(query, function (err, res) {
         if (err) throw err;
         console.log("\n");
@@ -304,7 +310,7 @@ function addEmp() {
             let lastName = upperAnswer(res.last_name);
             // get role id for selected position
             let roleID;
-            connection.query("SELECT id FROM role where title=?", [res.role], function (err, res) {
+            connection.query("SELECT id FROM role WHERE title=?", [res.role], function (err, res) {
                 if (err) throw err;
                 roleID = res[0].id;
                 findManagerID(roleID);
